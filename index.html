@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="pt">
+	<head>
+		<title>three.js wegbl - TorusKnot interativo</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<link href='https://fonts.googleapis.com/css?family=Montserrat' rel='stylesheet' type='text/css'>
+		<style>
+			body {
+				background-color: #f0f0f0;
+				color: #000000;
+				font-family: 'Montserrat', sans-serif;
+          margin:0;
+          overflow:hidden; 
+			}
+			a {
+				color: #08f;
+			}
+			.popup {
+				max-width: 75%;
+				height: auto;
+				background-color: rgba(255, 255, 255, 0.49);
+				border-radius: 5px;
+				position: absolute;
+				bottom: 5%;
+				left: 10%;
+				padding: 5px 20px 5px 20px;
+				-moz-box-shadow: 3px 3px 5px 6px #ccc;
+				-webkit-box-shadow: 3px 3px 5px 6px #ccc;
+				box-shadow: 1px 3px 1px 1px rgba(0, 0, 0, 0.17);
+				z-index:1109;
+        	}
+		</style>
+	</head>
+	<body>
+		<script type="text/javascript" src="/js/three_mmi.js"></script>
+		<script type="text/javascript" src="/js/three.js"></script>
+		<script type="text/javascript" src="/js/stats.js"></script>
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+		<a href = "https://luhcs.vercel.app" target="_blank" style="position:absolute;top:1%;right:40%;width:20%;z-index:10;color:#FFFFFF;text-align:center; text-transform:uppercase;text-decoration:none;">Interação com objeto simples - Nó toral</a>
+		<div class="popup"><div class="text"></div></div>
+
+		
+	
+		<script>
+			
+			// Popup inicia escondido
+
+			$(".popup").hide();
+
+			let container, stats;
+			let INTERSECTED = false;
+            let SELECTED = false;
+			let theta = 0;
+
+
+			// Mouse e raio para parametro da camera	
+			const pointer = new THREE.Vector2();
+			const radius = 100;
+
+			// Cores
+
+			const blue_color = new THREE.Color(0x1D8DCA);
+			const white_color = new THREE.Color(0xFFFFFF);
+			const yellow_color = new THREE.Color(0xFFFF00);
+            
+			// Container do status
+
+				container = document.createElement( 'div' );
+				document.body.appendChild( container );
+
+
+			// Camera
+				const camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 10000 );
+				camera.layers.enable( 0 );
+				camera.layers.enable( 1 );
+			
+			// Cenario
+
+				const scene = new THREE.Scene();
+				scene.background = new THREE.Color( 0x1c1c1a );
+			
+			// Iluminação
+
+				const light = new THREE.DirectionalLight( 0xffffff, 1 );
+				light.position.set( 1, 1, 1 ).normalize();
+				scene.add( light );
+
+			// Objeto : TorusKnot
+				const geometry = new THREE.TorusKnotGeometry( 10, 3, 100, 16 );
+
+                    let object = new THREE.Mesh( geometry, new THREE.MeshStandardMaterial({ color: blue_color , wireframe: true}));
+					object.name= 'knot';
+                                       
+                    
+                    scene.add(object);
+				
+				// Captura de eventos e interação com o objeto
+				  
+					const mmi = new MouseMeshInteraction(scene, camera);
+				
+					// Interações
+					
+				// Ao interceptar
+
+				mmi.addHandler('knot', 'mouseenter', function(object){
+					console.log('knot foi interceptado!');
+					if(object.material.color === blue_color) {
+					// A cor se torna amarelo ao interceptar o objeto
+						object.material.color = yellow_color
+						INTERSECTED = true;
+					}
+					else {
+					// Impede que o objeto selecionado se torne amarelo ao ser interceptado
+						if(SELECTED === false && INTERSECTED === false) {object.material.color = blue_color;
+					} if(SELECTED === true) {
+							object.material.color = white_color;
+						}}
+				})
+
+				// Ao abandonar 
+
+				mmi.addHandler('knot', 'mouseleave', function(object){
+					console.log('knot foi abandonado!');
+					if(SELECTED === true) {
+					// Não altera a cor do objeto selecionado ao abandona-lo
+						object.material.color = white_color;
+						INTERSECTED = false;
+					}
+					else {
+					// Reseta a cor do objeto ao abandona-lo
+						if(SELECTED === false) {object.material.color = blue_color;
+					}}
+				})
+				
+
+				// Ao clicar
+					mmi.addHandler('knot', 'click', function(object) {
+					console.log('knot está sendo selecionado!');
+					// A cor é trocada
+					if (object.material.color === yellow_color && INTERSECTED === true) {
+						object.material.color = white_color;
+					// Popup é exibido
+						$( ".text" ).empty();
+            			$( ".popup" ).append( "<div class='text'><p>Na teoria dos nós, um nó toral é um tipo especial de nó que pertence a uma superfície de um toro não atada em R³. Da mesma forma, um enlace toral é um enlace que se encontra na superfície de um toro de mesma forma. Cada nó toral é especificado por um par de números inteiros, que são primos entre si p e q. Se assemelha com simbolos mitológicos como Valknut, para os nórdicos.</p></div>" );
+						$(".popup").show();
+						SELECTED = true;
+					}
+					// Ao clicar novamente
+					else {
+						// A cor é resetada
+						object.material.color = blue_color;
+						// Popup é escondido
+						$(".popup").hide();
+						INTERSECTED = false;
+						SELECTED = false;
+					}
+				});
+				
+				// Renderizador
+
+				renderer = new THREE.WebGLRenderer();
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				container.appendChild( renderer.domElement );
+
+
+				stats = new Stats();
+				container.appendChild( stats.dom );
+				//
+
+				window.addEventListener( 'resize', onWindowResize );
+
+			
+			// Correção de aspecto ao redimensionamento da janela
+
+			function onWindowResize() {
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+			}
+			
+			// Função para animações do objeto e atualização do benchmark.
+
+			function animate() {
+
+				requestAnimationFrame( animate );
+
+				render();
+				stats.update();
+
+			}
+
+            animate();
+
+          
+		// Animação da camera, atualização de matrizes e interpretação dos eventos 
+
+			function render() {
+
+				theta += 0.1;
+
+				camera.position.x = radius * Math.sin( THREE.MathUtils.degToRad( theta ) );
+				camera.position.y = radius * Math.sin( THREE.MathUtils.degToRad( theta ) );
+				camera.position.z = radius * Math.cos( THREE.MathUtils.degToRad( theta ) );
+				camera.lookAt( scene.position );
+				mmi.update();
+				camera.updateMatrixWorld();
+
+			
+				
+				renderer.render( scene, camera );
+
+			}
+
+		</script>
+
+	</body>
+</html>
